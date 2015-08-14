@@ -12,23 +12,43 @@
     group="{{syslog_ng_group}}"
   with_items: 
   - "{{ ca_certificate }}"
-  - "{{ ca_private_key }}"
+
+- name: Check if server has a certificate
+  stat: path="{{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-crt.pem"
+  register: certificate_file
+
+- name: Creates directory
+  file: path="{{ playbook_dir }}/tmp/" state=directory
+  delegate_to: localhost
+  when: not certificate_file.stat.exists
 
 - name: generate server certificate
   command: "{{ item }}"
-  args:
-    creates: "{{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-crt.pem"
+  when: not certificate_file.stat.exists
+  delegate_to: localhost
   with_items:
-  - "openssl genrsa -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-key.pem 2048"
+  - "openssl genrsa -out {{ playbook_dir }}/tmp/{{ syslog_cert_name }}-key.pem 2048"
   - > 
     openssl req -new
     -subj "/C={{ syslog_cert_subj.country|default('') }}/ST={{ syslog_cert_subj.state|default('') }}/L={{ syslog_cert_subj.city|default('') }}/O={{ syslog_cert_subj.organization|default('') }}/OU={{ syslog_cert_subj.unit|default('') }}{% if syslog_cert_subj.domains is defined %}{% for domain in syslog_cert_subj.domains %}/CN={{ domain }}{% endfor %}{% else %}/CN={{ syslog_cert_subj.name }}{% endif %}/emailAddress={{ syslog_cert_subj.email|default('') }}" 
-    -key {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-key.pem
-    -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-csr.pem
+    -key {{ playbook_dir }}/tmp/{{ syslog_cert_name }}-key.pem
+    -out {{ playbook_dir }}/tmp/{{ syslog_cert_name }}-csr.pem
   - >
     openssl x509 -req -days 3650 
-    -in {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-csr.pem 
-    -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-crt.pem 
-    -CA {{syslog_ng_config_dir}}/ssl/ca/{{ ca_certificate }} 
-    -CAkey {{syslog_ng_config_dir}}/ssl/ca/{{ ca_private_key }} -CAcreateserial
+    -in {{ playbook_dir }}/tmp/{{ syslog_cert_name }}-csr.pem 
+    -out {{ playbook_dir }}/tmp/{{ syslog_cert_name }}-crt.pem 
+    -CA {{ playbook_dir }}/ca/{{ ca_certificate }} 
+    -CAkey {{ playbook_dir }}/ca/{{ ca_private_key }} -CAcreateserial
+    -passin pass:{{ ca_passphrase }}
     
+- name: Copy certificates
+  when: not certificate_file.stat.exists
+  copy: 
+    src="{{ playbook_dir }}/tmp/{{ item }}"
+    dest="{{syslog_ng_config_dir}}/ssl/{{ item }}"
+    owner="{{syslog_ng_user}}"
+    group="{{syslog_ng_group}}"
+  with_items: 
+  - "{{ syslog_cert_name }}-crt.pem"
+  - "{{ syslog_cert_name }}-key.pem"
+  notify: reload syslog-ng
