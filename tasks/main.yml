@@ -11,13 +11,6 @@
 - include: ca.yml
   when: ca_certificate is defined 
 
-- name: "applying main configuration"
-  copy:
-    src="syslog-ng.conf"
-    dest="{{syslog_ng_config_file}}"
-    owner="{{syslog_ng_user}}"
-    group="{{syslog_ng_group}}"
-
 - name: "applying remote sources configuration"
   template:
     src="remote_sources.conf.j2"

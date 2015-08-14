@@ -21,6 +21,6 @@ source s_{{item.key}} {
 
 {% for k, v in  item.value.loggers.iteritems() %}
 filter f_{{ k }} { {{ v.filter}} };
-destination d_{{ k }} { file({{ item.value.log_dir }}/{{ v.log_file}}); };
-log { source(s_{{ item.key }}); filter(f_{{ k }}); destination(d_{{ k }}); };
+destination d_{{ k }} { file({{ item.value.log_dir }}/{{ v.log_file}} create-dirs(yes)); };
+log { source(s_{{ item.key }}); filter(f_{{ k }}); destination(d_{{ k }} ); };
 {% endfor %}
