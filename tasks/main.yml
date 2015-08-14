@@ -1,0 +1,29 @@
+---
+- name: update apt's cache
+  apt: update_cache=yes cache_valid_time=86400
+
+- name: install syslog-ng
+  apt: name=syslog-ng-core state=present
+
+- name: ensure syslog-ng is running (and enable it at boot)
+  service: name=syslog-ng state=started enabled=yes
+
+- include: ca.yml
+  when: ca_certificate is defined 
+
+- name: "applying main configuration"
+  copy:
+    src="syslog-ng.conf"
+    dest="{{syslog_ng_config_file}}"
+    owner="{{syslog_ng_user}}"
+    group="{{syslog_ng_group}}"
+
+- name: "applying remote sources configuration"
+  template:
+    src="remote_sources.conf.j2"
+    dest="{{syslog_ng_config_dir}}/conf.d/{{ item.key }}.conf"
+    owner="{{syslog_ng_user}}"
+    group="{{syslog_ng_group}}"
+  with_dict: "{{ syslog_ng_remote_sources }}"
+  notify:
+  - reload syslog-ng

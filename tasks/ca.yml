@@ -1,0 +1,34 @@
+---
+- name: "Create SSL & CA directory"
+  file: 
+    path="{{syslog_ng_config_dir}}/ssl/ca"
+    state=directory
+
+- name: Copy CA files 
+  copy: 
+    src="ca/{{ item }}"
+    dest="{{syslog_ng_config_dir}}/ssl/ca/{{ item }}"
+    owner="{{syslog_ng_user}}"
+    group="{{syslog_ng_group}}"
+  with_items: 
+  - "{{ ca_certificate }}"
+  - "{{ ca_private_key }}"
+
+- name: generate server certificate
+  command: "{{ item }}"
+  args:
+    creates: "{{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-crt.pem"
+  with_items:
+  - "openssl genrsa -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-key.pem 2048"
+  - > 
+    openssl req -new
+    -subj "/C={{ syslog_cert_subj.country|default('') }}/ST={{ syslog_cert_subj.state|default('') }}/L={{ syslog_cert_subj.city|default('') }}/O={{ syslog_cert_subj.organization|default('') }}/OU={{ syslog_cert_subj.unit|default('') }}{% if syslog_cert_subj.domains is defined %}{% for domain in syslog_cert_subj.domains %}/CN={{ domain }}{% endfor %}{% else %}/CN={{ syslog_cert_subj.name }}{% endif %}/emailAddress={{ syslog_cert_subj.email|default('') }}" 
+    -key {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-key.pem
+    -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-csr.pem
+  - >
+    openssl x509 -req -days 3650 
+    -in {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-csr.pem 
+    -out {{ syslog_ng_config_dir }}/ssl/{{ syslog_cert_name }}-crt.pem 
+    -CA {{syslog_ng_config_dir}}/ssl/ca/{{ ca_certificate }} 
+    -CAkey {{syslog_ng_config_dir}}/ssl/ca/{{ ca_private_key }} -CAcreateserial
+    
