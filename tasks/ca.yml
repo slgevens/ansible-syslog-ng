@@ -44,7 +44,7 @@
 - name: Copy certificates
   when: not certificate_file.stat.exists
   copy: 
-    src="{{ playbook_dir }}/tmp/{{ item }}"
+    src="tmp/{{ item }}"
     dest="{{syslog_ng_config_dir}}/ssl/{{ item }}"
     owner="{{syslog_ng_user}}"
     group="{{syslog_ng_group}}"
