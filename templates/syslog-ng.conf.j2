@@ -1,0 +1,126 @@
+# {{ ansible_managed }}
+# DO NOT EDIT MANUALLY
+
+@version: {{ syslog_ng_config_version }}
+@include "scl.conf"
+@include "`scl-root`/system/tty10.conf"
+
+## OPTIONS
+options { chain_hostnames(off);
+	flush_lines(0);
+	{% if syslog_use_dns is defined %}use_dns({{ syslog_use_dns }});{% else %}yes);	{% endif %}
+
+	{% if syslog_use_fqdn is defined %}use_fqdn({{ syslog_use_fqdn }});{% else %}yes);{% endif %}
+
+	{% if syslog_keep_hostname is defined %}keep_hostname({{ syslog_keep_hostname }});{% else %}yes);{% endif %}
+	
+	owner("root");
+	group("adm");
+	perm(0640);
+	stats_freq(0);
+	bad_hostname("^gconfd$");
+	create_dirs(yes);
+	dir_perm(0750);
+	dir_owner("root");
+	dir_group("root");
+	};
+
+## SOURCES
+source s_src {
+       system();
+       internal();
+       };
+
+{% if syslog_sources_configuration_tcp is defined %}{% for s in syslog_sources_configuration_tcp %}
+source {% if s.syslog_source_name is defined %}{{ s.syslog_source_name }}{% else %}s_srs {% endif %} {
+       tcp(ip({{ s.syslog_tcp_ip }}) port({{ s.syslog_tcp_port }}) {% if s.syslog_tcp_max_connections is defined %}max-connections({{ s.syslog_tcp_max_connections }}));{% else %}100));{% endif %} };{% endfor %}{% endif %}
+{% if syslog_sources_configuration_udp is defined %}{% for s in syslog_sources_configuration_udp %}
+source {% if s.syslog_source_name is defined %}{{ s.syslog_source_name }}{% else %}s_udp {% endif %} {
+       {% if s.syslog_source_udp %}udp(ip({{ s.syslog_udp_ip }}) port({{ s.syslog_udp_port }})) };{% else %}{% endif %}{% endfor %}{% endif %}       
+
+## DESTINATIONS
+{% if syslog_destinations is defined %} {{ syslog_destinations }}{% else %}
+destination df_auth { file("/var/log/auth.log"); };
+destination df_syslog { file("/var/log/syslog"); };
+destination df_cron { file("/var/log/cron.log"); };
+destination df_daemon { file("/var/log/daemon.log"); };
+destination df_kern { file("/var/log/kern.log"); };
+destination df_lpr { file("/var/log/lpr.log"); };
+destination df_mail { file("/var/log/mail.log"); };
+destination df_user { file("/var/log/user.log"); };
+destination df_uucp { file("/var/log/uucp.log"); };
+destination df_facility_dot_info { file("/var/log/$FACILITY.info"); };
+destination df_facility_dot_notice { file("/var/log/$FACILITY.notice"); };
+destination df_facility_dot_warn { file("/var/log/$FACILITY.warn"); };
+destination df_facility_dot_err { file("/var/log/$FACILITY.err"); };
+destination df_facility_dot_crit { file("/var/log/$FACILITY.crit"); };
+destination df_news_dot_notice { file("/var/log/news/news.notice" owner("news")); };
+destination df_news_dot_err { file("/var/log/news/news.err" owner("news")); };
+destination df_news_dot_crit { file("/var/log/news/news.crit" owner("news")); };
+destination df_debug { file("/var/log/debug"); };
+destination df_messages { file("/var/log/messages"); };
+destination dp_xconsole { pipe("/dev/xconsole"); };
+destination du_all { usertty("*"); };
+
+{% endif %}
+
+
+## FILTERS
+{% if syslog_filters is defined %} {{ syslog_filters }} {% else %}
+filter f_dbg { level(debug); };
+filter f_info { level(info); };
+filter f_notice { level(notice); };
+filter f_warn { level(warn); };
+filter f_err { level(err); };
+filter f_crit { level(crit .. emerg); };
+filter f_debug { level(debug) and not facility(auth, authpriv, news, mail); };
+filter f_error { level(err .. emerg) ; };
+filter f_messages { level(info,notice,warn) and
+                    not facility(auth,authpriv,cron,daemon,mail,news); };
+filter f_auth { facility(auth, authpriv) and not filter(f_debug); };
+filter f_cron { facility(cron) and not filter(f_debug); };
+filter f_daemon { facility(daemon) and not filter(f_debug); };
+filter f_kern { facility(kern) and not filter(f_debug); };
+filter f_lpr { facility(lpr) and not filter(f_debug); };
+filter f_local { facility(local0, local1, local3, local4, local5,
+                    local6, local7) and not filter(f_debug); };
+filter f_mail { facility(mail) and not filter(f_debug); };
+filter f_news { facility(news) and not filter(f_debug); };
+filter f_syslog3 { not facility(auth, authpriv, mail) and not filter(f_debug); };
+filter f_user { facility(user) and not filter(f_debug); };
+filter f_uucp { facility(uucp) and not filter(f_debug); };
+filter f_cnews { level(notice, err, crit) and facility(news); };
+filter f_cother { level(debug, info, notice, warn) or facility(daemon, mail); };
+filter f_ppp { facility(local2) and not filter(f_debug); };
+filter f_console { level(warn .. emerg); };					    
+
+{% endif %}
+
+
+## LOG
+{% if syslog_log is defined %} {{ syslog_log }} {% else %}
+log { source(s_src); filter(f_auth); destination(d_auth); };
+log { source(s_src); filter(f_cron); destination(d_cron); };
+log { source(s_src); filter(f_daemon); destination(d_daemon); };
+log { source(s_src); filter(f_kern); destination(d_kern); };
+log { source(s_src); filter(f_lpr); destination(d_lpr); };
+log { source(s_src); filter(f_syslog3); destination(d_syslog); };
+log { source(s_src); filter(f_user); destination(d_user); };
+log { source(s_src); filter(f_uucp); destination(d_uucp); };
+log { source(s_src); filter(f_mail); destination(d_mail); };
+log { source(s_src); filter(f_news); filter(f_crit); destination(d_newscrit); };
+log { source(s_src); filter(f_news); filter(f_err); destination(d_newserr); };
+log { source(s_src); filter(f_news); filter(f_notice); destination(d_newsnotice); };
+log { source(s_src); filter(f_debug); destination(d_debug); };
+log { source(s_src); filter(f_error); destination(d_error); };
+log { source(s_src); filter(f_messages); destination(d_messages); };
+log { source(s_src); filter(f_console); destination(d_console_all);
+      		     		    destination(d_xconsole); };
+log { source(s_src); filter(f_crit); destination(d_console); };
+
+{% endif %}
+
+
+{% if syslog_include %}
+@include "/etc/syslog-ng/conf.d/*.conf"
+{% endif %}
