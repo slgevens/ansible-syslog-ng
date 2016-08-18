@@ -5,6 +5,4 @@ syslog_ng_config_version: 3.5
 syslog_ng_config_dir: "/etc/syslog-ng"
 syslog_ng_config_file: "{{ syslog_ng_config_dir }}/syslog-ng.conf"
 
-syslog_sources_configuration_udp: []
-syslog_sources_configuration_tcp: []
 ...
