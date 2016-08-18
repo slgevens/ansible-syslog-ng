@@ -11,12 +11,12 @@
 #- include: ca.yml
 #  when: ca_certificate is defined
   
-  - name: Create main rsyslog configuration
-    template:
-      src="syslog-ng.conf.j2"
-      dest="{{ syslog_ng_config_file  }}"
-      owner="{{ syslog_ng_user }}"
-      group="{{ syslog_ng_group }}"
-    notify:
-      - restart syslog-ng
+- name: Create main syslog-ng configuration
+  template:
+    src="syslog-ng.conf.j2"
+    dest="{{ syslog_ng_config_file  }}"
+    owner="{{ syslog_ng_user }}"
+    group="{{ syslog_ng_group }}"
+  notify:
+    - restart syslog-ng
 ...
