@@ -38,8 +38,14 @@ source {% if s.syslog_source_name is defined %}{{ s.syslog_source_name }}{% else
 source {% if s.syslog_source_name is defined %}{{ s.syslog_source_name }}{% else %}s_udp {% endif %} {
        {% if s.syslog_source_udp %}udp(ip({{ s.syslog_udp_ip }}) port({{ s.syslog_udp_port }})) };{% else %}{% endif %}{% endfor %}{% endif %}       
 
+## PARAMS
+{% if syslog_params is defined %}{{ syslog_params }}{% else %}
+
+{% endif %}
+
+
 ## DESTINATIONS
-{% if syslog_destinations is defined %} {{ syslog_destinations }}{% else %}
+{% if syslog_destinations is defined %}{{ syslog_destinations }}{% else %}
 destination df_auth { file("/var/log/auth.log"); };
 destination df_syslog { file("/var/log/syslog"); };
 destination df_cron { file("/var/log/cron.log"); };
@@ -66,7 +72,7 @@ destination du_all { usertty("*"); };
 
 
 ## FILTERS
-{% if syslog_filters is defined %} {{ syslog_filters }} {% else %}
+{% if syslog_filters is defined %}{{ syslog_filters }}{% else %}
 filter f_dbg { level(debug); };
 filter f_info { level(info); };
 filter f_notice { level(notice); };
@@ -98,7 +104,7 @@ filter f_console { level(warn .. emerg); };
 
 
 ## LOG
-{% if syslog_log is defined %} {{ syslog_log }} {% else %}
+{% if syslog_log is defined %}{{ syslog_log }}{% else %}
 log { source(s_src); filter(f_auth); destination(d_auth); };
 log { source(s_src); filter(f_cron); destination(d_cron); };
 log { source(s_src); filter(f_daemon); destination(d_daemon); };
