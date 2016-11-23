@@ -38,5 +38,6 @@ Playbook example
    syslog_destinations: |-
    syslog_filters: |-
    syslog_log: |-
-
+   syslog_params: |-
+   
    
