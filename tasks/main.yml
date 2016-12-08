@@ -17,6 +17,9 @@
     dest="{{ syslog_ng_config_file  }}"
     owner="{{ syslog_ng_user }}"
     group="{{ syslog_ng_group }}"
+
+- name: Restart syslog-ng
+  service: name=syslog-ng state=restarted
   notify:
     - restart syslog-ng
 ...
